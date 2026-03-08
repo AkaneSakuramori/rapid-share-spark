@@ -1,17 +1,15 @@
 import Navbar from "@/components/Navbar";
 import HeroUpload from "@/components/HeroUpload";
-import Features from "@/components/Features";
 import Footer from "@/components/Footer";
 
-const Index = () => {
-  return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
+const Index = () => (
+  <div className="min-h-screen bg-background flex flex-col">
+    <Navbar />
+    <div className="flex-1">
       <HeroUpload />
-      <Features />
-      <Footer />
     </div>
-  );
-};
+    <Footer />
+  </div>
+);
 
 export default Index;
