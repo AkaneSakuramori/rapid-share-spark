@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { CloudUpload, Link2, X, FileImage, Clipboard, CheckCircle2, ArrowUp } from "lucide-react";
+import { CloudUpload, Link2, X, Clipboard, CheckCircle2, ArrowUp, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface FileItem {
@@ -11,9 +11,11 @@ interface FileItem {
   progress: number;
   done: boolean;
   url: string;
+  deleteUrl: string;
 }
 
 const generateFakeUrl = (name: string) => `https://rapidx.me/i/${Math.random().toString(36).slice(2, 10)}/${name}`;
+const generateDeleteUrl = () => `https://rapidx.me/delete/${Math.random().toString(36).slice(2, 14)}`;
 
 const HeroUpload = () => {
   const [files, setFiles] = useState<FileItem[]>([]);
@@ -29,6 +31,7 @@ const HeroUpload = () => {
       progress: 0,
       done: false,
       url: generateFakeUrl(file.name),
+      deleteUrl: generateDeleteUrl(),
     }));
     setFiles((prev) => [...prev, ...items]);
   }, []);
@@ -84,119 +87,108 @@ const HeroUpload = () => {
     setUrlInput("");
   };
 
+  const resetUpload = () => setFiles([]);
+
   const allDone = files.length > 0 && files.every((f) => f.done);
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center pt-24 pb-16 px-4" id="upload-zone">
-      {/* Background gradient */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-primary/10 blur-[120px]" />
-        <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full bg-accent/10 blur-[100px]" />
-      </div>
-
-      <div className="container mx-auto max-w-3xl relative z-10">
-        {/* Headline */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="text-center mb-10">
-          <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold mb-4">
-            <span className="text-gradient">Instant</span> image hosting.
-          </h1>
-          <p className="text-lg text-muted-foreground max-w-lg mx-auto">
-            Drag, drop, share instantly. No signup needed. Lightning-fast CDN delivery.
-          </p>
-        </motion.div>
-
+    <section className="flex flex-col items-center justify-center pt-20 pb-8 px-4 min-h-[calc(100vh-3.5rem)]" id="upload-zone">
+      <div className="w-full max-w-2xl">
         {/* Upload zone */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.15 }}
-          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-          onDragLeave={() => setIsDragging(false)}
-          onDrop={handleDrop}
-          onClick={() => inputRef.current?.click()}
-          className={`relative cursor-pointer rounded-2xl border-2 border-dashed p-10 sm:p-14 text-center transition-all duration-300 ${
-            isDragging
-              ? "border-primary bg-primary/5 glow-border-strong scale-[1.02]"
-              : "border-border hover:border-primary/50 hover:bg-card/50 glass"
-          }`}
-        >
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            onChange={(e) => {
-              const selected = Array.from(e.target.files || []);
-              if (selected.length) addFiles(selected);
-              e.target.value = "";
-            }}
-          />
-          <motion.div animate={isDragging ? { y: -8, scale: 1.1 } : { y: 0, scale: 1 }} transition={{ type: "spring", stiffness: 300 }}>
-            <CloudUpload className="w-12 h-12 mx-auto mb-4 text-primary animate-float" />
+        {!allDone && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={handleDrop}
+            onClick={() => inputRef.current?.click()}
+            className={`relative cursor-pointer rounded-2xl border-2 border-dashed p-10 sm:p-16 text-center transition-all duration-300 ${
+              isDragging
+                ? "border-primary bg-primary/5 glow-border-strong scale-[1.01]"
+                : "border-border hover:border-primary/50 glass"
+            }`}
+          >
+            <input
+              ref={inputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                const selected = Array.from(e.target.files || []);
+                if (selected.length) addFiles(selected);
+                e.target.value = "";
+              }}
+            />
+            <CloudUpload className={`w-10 h-10 mx-auto mb-4 text-primary ${isDragging ? "animate-bounce" : ""}`} />
+            <p className="text-base font-medium text-foreground mb-1">
+              {isDragging ? "Drop your images here" : "Drop images here or click to upload"}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              PNG, JPG, GIF, WebP — 50 MB max per file
+            </p>
+            <p className="text-xs text-muted-foreground mt-2">
+              Paste from clipboard <kbd className="px-1.5 py-0.5 rounded bg-secondary text-xs font-mono">⌘V</kbd>
+            </p>
           </motion.div>
-          <p className="font-display text-lg font-semibold text-foreground mb-1">
-            {isDragging ? "Drop your images here!" : "Drag & drop images here"}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            or click to browse • paste from clipboard (<kbd className="px-1.5 py-0.5 rounded bg-secondary text-xs font-mono">⌘V</kbd>)
-          </p>
-          <p className="text-xs text-muted-foreground mt-2">50 MB max per file • PNG, JPG, GIF, WebP</p>
-        </motion.div>
+        )}
 
         {/* URL upload */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="mt-4 flex gap-2">
-          <div className="flex-1 flex items-center gap-2 glass rounded-xl px-4 h-11">
-            <Link2 className="w-4 h-4 text-muted-foreground shrink-0" />
-            <input
-              type="url"
-              placeholder="Paste image URL to upload..."
-              value={urlInput}
-              onChange={(e) => setUrlInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleUrlUpload()}
-              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-              onClick={(e) => e.stopPropagation()}
-            />
+        {!allDone && (
+          <div className="mt-3 flex gap-2">
+            <div className="flex-1 flex items-center gap-2 glass rounded-xl px-3 h-10">
+              <Link2 className="w-4 h-4 text-muted-foreground shrink-0" />
+              <input
+                type="url"
+                placeholder="Paste image URL..."
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleUrlUpload()}
+                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
+            <Button size="default" onClick={handleUrlUpload} className="gap-1.5">
+              <ArrowUp className="w-4 h-4" /> Upload
+            </Button>
           </div>
-          <Button size="default" onClick={handleUrlUpload}>
-            <ArrowUp className="w-4 h-4" /> Upload
-          </Button>
-        </motion.div>
+        )}
 
-        {/* File queue */}
+        {/* File queue (uploading) */}
         <AnimatePresence>
-          {files.length > 0 && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-6 space-y-3">
+          {files.length > 0 && !allDone && (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4 space-y-2">
               {files.map((f) => (
                 <motion.div
                   key={f.id}
-                  initial={{ opacity: 0, x: -20 }}
+                  initial={{ opacity: 0, x: -12 }}
                   animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
+                  exit={{ opacity: 0, x: 12 }}
                   className="glass rounded-xl p-3 flex items-center gap-3"
                 >
-                  <img src={f.preview} alt="" className="w-12 h-12 rounded-lg object-cover" />
+                  <img src={f.preview} alt="" className="w-10 h-10 rounded-lg object-cover" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate text-foreground">{f.file.name}</p>
                     <p className="text-xs text-muted-foreground">{(f.file.size / 1024).toFixed(0)} KB</p>
                     {!f.done && (
-                      <div className="mt-1.5 h-1.5 rounded-full bg-secondary overflow-hidden">
+                      <div className="mt-1 h-1 rounded-full bg-secondary overflow-hidden">
                         <motion.div
                           className="h-full rounded-full bg-primary"
                           initial={{ width: 0 }}
                           animate={{ width: `${f.progress}%` }}
-                          transition={{ ease: "easeOut" }}
                         />
                       </div>
                     )}
                   </div>
                   {f.done ? (
-                    <CheckCircle2 className="w-5 h-5 text-accent shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-accent shrink-0" />
                   ) : (
                     <span className="text-xs text-muted-foreground font-mono w-10 text-right">{Math.round(f.progress)}%</span>
                   )}
-                  <button onClick={() => removeFile(f.id)} className="p-1 rounded-lg hover:bg-secondary transition-colors" aria-label="Remove">
-                    <X className="w-4 h-4 text-muted-foreground" />
+                  <button onClick={(e) => { e.stopPropagation(); removeFile(f.id); }} className="p-1 rounded-lg hover:bg-secondary transition-colors" aria-label="Remove">
+                    <X className="w-3.5 h-3.5 text-muted-foreground" />
                   </button>
                 </motion.div>
               ))}
@@ -206,73 +198,86 @@ const HeroUpload = () => {
 
         {/* Results */}
         <AnimatePresence>
-          {allDone && <ResultsPanel files={files} />}
+          {allDone && <ResultsPanel files={files} onReset={resetUpload} />}
         </AnimatePresence>
-
-        {/* Trust bar */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.45 }} className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
-          {["No signup needed", "Files last forever", "CDN-powered", "Rapidx.me"].map((t) => (
-            <span key={t} className="flex items-center gap-1.5">
-              <span className="w-1 h-1 rounded-full bg-accent" /> {t}
-            </span>
-          ))}
-        </motion.div>
       </div>
     </section>
   );
 };
 
-const linkFormats = (url: string, name: string) => [
+const linkFormats = (url: string, name: string, deleteUrl: string) => [
   { label: "Direct Link", value: url },
   { label: "Markdown", value: `![${name}](${url})` },
   { label: "HTML", value: `<img src="${url}" alt="${name}" />` },
   { label: "BBCode", value: `[img]${url}[/img]` },
+  { label: "Delete Link", value: deleteUrl },
 ];
 
-const ResultsPanel = ({ files }: { files: FileItem[] }) => {
+const ResultsPanel = ({ files, onReset }: { files: FileItem[]; onReset: () => void }) => {
   const [activeTab, setActiveTab] = useState(0);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast.success("Copied!", { icon: <Clipboard className="w-4 h-4" /> });
+    toast.success("Copied to clipboard");
   };
 
+  const activeFile = files[activeTab];
+
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mt-8">
-      <div className="flex items-center gap-2 mb-4">
-        <CheckCircle2 className="w-5 h-5 text-accent" />
-        <h2 className="font-display text-lg font-semibold text-foreground">
-          {files.length} image{files.length > 1 ? "s" : ""} uploaded!
-        </h2>
+    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-accent" />
+          <span className="text-sm font-medium text-foreground">
+            {files.length} image{files.length > 1 ? "s" : ""} uploaded
+          </span>
+        </div>
+        <Button variant="ghost" size="sm" onClick={onReset} className="gap-1.5 text-muted-foreground">
+          <RotateCcw className="w-3.5 h-3.5" /> Upload more
+        </Button>
       </div>
 
-      {/* Thumbnails */}
-      <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-        {files.map((f, i) => (
-          <button
-            key={f.id}
-            onClick={() => setActiveTab(i)}
-            className={`shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${
-              activeTab === i ? "border-primary glow-border" : "border-border hover:border-primary/50"
-            }`}
-          >
-            <img src={f.preview} alt="" className="w-full h-full object-cover" />
-          </button>
-        ))}
-      </div>
+      {/* Image preview + thumbnails */}
+      {activeFile && (
+        <div className="glass rounded-2xl overflow-hidden">
+          <div className="bg-secondary/30 flex items-center justify-center p-4 max-h-64">
+            <img src={activeFile.preview} alt="" className="max-h-56 max-w-full rounded-lg object-contain" />
+          </div>
 
-      {/* Links */}
-      {files[activeTab] && (
-        <div className="glass rounded-2xl p-4 space-y-2">
-          {linkFormats(files[activeTab].url, files[activeTab].file.name).map((fmt) => (
-            <div key={fmt.label} className="flex items-center gap-3">
-              <span className="text-xs text-muted-foreground w-20 shrink-0">{fmt.label}</span>
-              <div className="flex-1 bg-secondary/50 rounded-lg px-3 py-2 text-xs font-mono text-foreground truncate">{fmt.value}</div>
-              <Button size="sm" variant="ghost" onClick={() => copyToClipboard(fmt.value)} className="shrink-0">
-                <Clipboard className="w-3.5 h-3.5" /> Copy
-              </Button>
+          {files.length > 1 && (
+            <div className="flex gap-1.5 px-4 py-3 border-t border-border overflow-x-auto">
+              {files.map((f, i) => (
+                <button
+                  key={f.id}
+                  onClick={() => setActiveTab(i)}
+                  className={`shrink-0 w-12 h-12 rounded-lg overflow-hidden border-2 transition-all ${
+                    activeTab === i ? "border-primary" : "border-transparent hover:border-border"
+                  }`}
+                >
+                  <img src={f.preview} alt="" className="w-full h-full object-cover" />
+                </button>
+              ))}
             </div>
-          ))}
+          )}
+
+          {/* Link formats */}
+          <div className="px-4 py-3 space-y-1.5 border-t border-border">
+            {linkFormats(activeFile.url, activeFile.file.name, activeFile.deleteUrl).map((fmt) => (
+              <div key={fmt.label} className="flex items-center gap-2">
+                <span className={`text-xs w-20 shrink-0 ${fmt.label === "Delete Link" ? "text-destructive" : "text-muted-foreground"}`}>
+                  {fmt.label === "Delete Link" && <Trash2 className="w-3 h-3 inline mr-1" />}
+                  {fmt.label}
+                </span>
+                <div className="flex-1 bg-secondary/50 rounded-lg px-2.5 py-1.5 text-xs font-mono text-foreground truncate">
+                  {fmt.value}
+                </div>
+                <Button size="sm" variant="ghost" onClick={() => copyToClipboard(fmt.value)} className="shrink-0 h-7 px-2">
+                  <Clipboard className="w-3 h-3" />
+                </Button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </motion.div>
