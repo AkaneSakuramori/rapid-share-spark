@@ -1,9 +1,11 @@
 import Navbar from "@/components/Navbar";
 import HeroUpload from "@/components/HeroUpload";
 import Footer from "@/components/Footer";
+import AnimatedBackground from "@/components/AnimatedBackground";
 
 const Index = () => (
-  <div className="min-h-screen bg-background flex flex-col">
+  <div className="min-h-screen bg-background flex flex-col relative">
+    <AnimatedBackground />
     <Navbar />
     <div className="flex-1">
       <HeroUpload />

@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { CloudUpload, Link2, X, Clipboard, CheckCircle2, ArrowUp, RotateCcw, Trash2 } from "lucide-react";
+import { CloudUpload, Link2, X, Clipboard, CheckCircle2, ArrowUp, RotateCcw, Trash2, Copy, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 interface FileItem {
@@ -36,7 +36,6 @@ const HeroUpload = () => {
     setFiles((prev) => [...prev, ...items]);
   }, []);
 
-  // Simulate progress
   useEffect(() => {
     const interval = setInterval(() => {
       setFiles((prev) =>
@@ -88,197 +87,314 @@ const HeroUpload = () => {
   };
 
   const resetUpload = () => setFiles([]);
-
   const allDone = files.length > 0 && files.every((f) => f.done);
 
   return (
-    <section className="flex flex-col items-center justify-center pt-20 pb-8 px-4 min-h-[calc(100vh-3.5rem)]" id="upload-zone">
+    <section className="flex flex-col items-center justify-center pt-24 pb-12 px-4 min-h-[calc(100vh-3.5rem)]" id="upload-zone">
       <div className="w-full max-w-2xl">
+        {/* Hero text */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          className="text-center mb-8"
+        >
+          <h1 className="text-4xl sm:text-5xl font-bold font-display tracking-tight mb-3">
+            <span className="text-gradient">Instant</span>{" "}
+            <span className="text-foreground">Image Hosting</span>
+          </h1>
+          <p className="text-muted-foreground text-base sm:text-lg max-w-md mx-auto">
+            Drop, paste, or upload — get shareable links in seconds.
+          </p>
+        </motion.div>
+
         {/* Upload zone */}
-        {!allDone && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={handleDrop}
-            onClick={() => inputRef.current?.click()}
-            className={`relative cursor-pointer rounded-2xl border-2 border-dashed p-10 sm:p-16 text-center transition-all duration-300 ${
-              isDragging
-                ? "border-primary bg-primary/5 glow-border-strong scale-[1.01]"
-                : "border-border hover:border-primary/50 glass"
-            }`}
-          >
-            <input
-              ref={inputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={(e) => {
-                const selected = Array.from(e.target.files || []);
-                if (selected.length) addFiles(selected);
-                e.target.value = "";
-              }}
-            />
-            <CloudUpload className={`w-10 h-10 mx-auto mb-4 text-primary ${isDragging ? "animate-bounce" : ""}`} />
-            <p className="text-base font-medium text-foreground mb-1">
-              {isDragging ? "Drop your images here" : "Drop images here or click to upload"}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              PNG, JPG, GIF, WebP — 50 MB max per file
-            </p>
-            <p className="text-xs text-muted-foreground mt-2">
-              Paste from clipboard <kbd className="px-1.5 py-0.5 rounded bg-secondary text-xs font-mono">⌘V</kbd>
-            </p>
-          </motion.div>
-        )}
+        <AnimatePresence mode="wait">
+          {!allDone ? (
+            <motion.div
+              key="upload"
+              initial={{ opacity: 0, y: 16, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -16, scale: 0.98 }}
+              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <motion.div
+                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={handleDrop}
+                onClick={() => inputRef.current?.click()}
+                whileHover={{ scale: 1.005 }}
+                whileTap={{ scale: 0.995 }}
+                className={`relative cursor-pointer rounded-2xl border-2 border-dashed p-10 sm:p-14 text-center transition-all duration-500 ${
+                  isDragging
+                    ? "border-primary bg-primary/5 glow-border-strong scale-[1.01]"
+                    : "border-border/60 hover:border-primary/40 glass cinematic-shadow"
+                }`}
+              >
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    const selected = Array.from(e.target.files || []);
+                    if (selected.length) addFiles(selected);
+                    e.target.value = "";
+                  }}
+                />
 
-        {/* URL upload */}
-        {!allDone && (
-          <div className="mt-3 flex gap-2">
-            <div className="flex-1 flex items-center gap-2 glass rounded-xl px-3 h-10">
-              <Link2 className="w-4 h-4 text-muted-foreground shrink-0" />
-              <input
-                type="url"
-                placeholder="Paste image URL..."
-                value={urlInput}
-                onChange={(e) => setUrlInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleUrlUpload()}
-                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-                onClick={(e) => e.stopPropagation()}
-              />
-            </div>
-            <Button size="default" onClick={handleUrlUpload} className="gap-1.5">
-              <ArrowUp className="w-4 h-4" /> Upload
-            </Button>
-          </div>
-        )}
-
-        {/* File queue (uploading) */}
-        <AnimatePresence>
-          {files.length > 0 && !allDone && (
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4 space-y-2">
-              {files.map((f) => (
                 <motion.div
-                  key={f.id}
-                  initial={{ opacity: 0, x: -12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 12 }}
-                  className="glass rounded-xl p-3 flex items-center gap-3"
+                  animate={isDragging ? { y: -8, scale: 1.1 } : { y: 0, scale: 1 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 >
-                  <img src={f.preview} alt="" className="w-10 h-10 rounded-lg object-cover" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate text-foreground">{f.file.name}</p>
-                    <p className="text-xs text-muted-foreground">{(f.file.size / 1024).toFixed(0)} KB</p>
-                    {!f.done && (
-                      <div className="mt-1 h-1 rounded-full bg-secondary overflow-hidden">
-                        <motion.div
-                          className="h-full rounded-full bg-primary"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${f.progress}%` }}
-                        />
-                      </div>
-                    )}
+                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-5">
+                    <CloudUpload className="w-7 h-7 text-primary" />
                   </div>
-                  {f.done ? (
-                    <CheckCircle2 className="w-4 h-4 text-accent shrink-0" />
-                  ) : (
-                    <span className="text-xs text-muted-foreground font-mono w-10 text-right">{Math.round(f.progress)}%</span>
-                  )}
-                  <button onClick={(e) => { e.stopPropagation(); removeFile(f.id); }} className="p-1 rounded-lg hover:bg-secondary transition-colors" aria-label="Remove">
-                    <X className="w-3.5 h-3.5 text-muted-foreground" />
-                  </button>
                 </motion.div>
-              ))}
+
+                <p className="text-base font-medium text-foreground mb-1">
+                  {isDragging ? "Drop your images here" : "Drop images here or click to upload"}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  PNG, JPG, GIF, WebP — 50 MB max
+                </p>
+                <p className="text-xs text-muted-foreground/60 mt-3 flex items-center justify-center gap-1.5">
+                  Paste from clipboard{" "}
+                  <kbd className="px-1.5 py-0.5 rounded-md bg-secondary text-[10px] font-mono text-muted-foreground border border-border">⌘V</kbd>
+                </p>
+              </motion.div>
+
+              {/* URL upload */}
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.4 }}
+                className="mt-3 flex gap-2"
+              >
+                <div className="flex-1 flex items-center gap-2 glass rounded-xl px-3.5 h-10 transition-all focus-within:glow-border">
+                  <Link2 className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <input
+                    type="url"
+                    placeholder="Paste image URL..."
+                    value={urlInput}
+                    onChange={(e) => setUrlInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleUrlUpload()}
+                    className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                  <Button size="default" onClick={handleUrlUpload} className="gap-1.5">
+                    <ArrowUp className="w-4 h-4" /> Upload
+                  </Button>
+                </motion.div>
+              </motion.div>
+
+              {/* File queue */}
+              <AnimatePresence>
+                {files.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-4 space-y-2"
+                  >
+                    {files.map((f, i) => (
+                      <motion.div
+                        key={f.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20, scale: 0.95 }}
+                        transition={{ delay: i * 0.05 }}
+                        className="glass rounded-xl p-3 flex items-center gap-3"
+                      >
+                        <img src={f.preview} alt="" className="w-10 h-10 rounded-lg object-cover ring-1 ring-border" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate text-foreground">{f.file.name}</p>
+                          <p className="text-xs text-muted-foreground">{(f.file.size / 1024).toFixed(0)} KB</p>
+                          {!f.done && (
+                            <div className="mt-1.5 h-1 rounded-full bg-secondary overflow-hidden">
+                              <motion.div
+                                className="h-full rounded-full bg-gradient-to-r from-primary to-accent"
+                                initial={{ width: 0 }}
+                                animate={{ width: `${f.progress}%` }}
+                                transition={{ ease: "easeOut" }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                        {f.done ? (
+                          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring" }}>
+                            <CheckCircle2 className="w-4 h-4 text-accent shrink-0" />
+                          </motion.div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground font-mono w-10 text-right">{Math.round(f.progress)}%</span>
+                        )}
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={(e) => { e.stopPropagation(); removeFile(f.id); }}
+                          className="p-1 rounded-lg hover:bg-secondary transition-colors"
+                          aria-label="Remove"
+                        >
+                          <X className="w-3.5 h-3.5 text-muted-foreground" />
+                        </motion.button>
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
+          ) : (
+            <ResultsPanel key="results" files={files} onReset={resetUpload} />
           )}
         </AnimatePresence>
 
-        {/* Results */}
-        <AnimatePresence>
-          {allDone && <ResultsPanel files={files} onReset={resetUpload} />}
-        </AnimatePresence>
+        {/* Trust bar */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="mt-8 flex items-center justify-center gap-4 text-xs text-muted-foreground/50"
+        >
+          <span>No signup needed</span>
+          <span className="w-1 h-1 rounded-full bg-muted-foreground/20" />
+          <span>CDN-powered</span>
+          <span className="w-1 h-1 rounded-full bg-muted-foreground/20" />
+          <span>rapidx.me</span>
+        </motion.div>
       </div>
     </section>
   );
 };
 
+/* ─── Link Formats ─── */
 const linkFormats = (url: string, name: string, deleteUrl: string) => [
-  { label: "Direct Link", value: url },
-  { label: "Markdown", value: `![${name}](${url})` },
-  { label: "HTML", value: `<img src="${url}" alt="${name}" />` },
-  { label: "BBCode", value: `[img]${url}[/img]` },
-  { label: "Delete Link", value: deleteUrl },
+  { label: "Direct Link", value: url, icon: ExternalLink },
+  { label: "Markdown", value: `![${name}](${url})`, icon: Copy },
+  { label: "HTML", value: `<img src="${url}" alt="${name}" />`, icon: Copy },
+  { label: "BBCode", value: `[img]${url}[/img]`, icon: Copy },
+  { label: "Delete Link", value: deleteUrl, icon: Trash2, destructive: true },
 ];
 
+/* ─── Results Panel ─── */
 const ResultsPanel = ({ files, onReset }: { files: FileItem[]; onReset: () => void }) => {
   const [activeTab, setActiveTab] = useState(0);
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
 
-  const copyToClipboard = (text: string) => {
+  const copyToClipboard = (text: string, idx: number) => {
     navigator.clipboard.writeText(text);
+    setCopiedIdx(idx);
     toast.success("Copied to clipboard");
+    setTimeout(() => setCopiedIdx(null), 2000);
   };
 
   const activeFile = files[activeTab];
 
   return (
-    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+    <motion.div
+      initial={{ opacity: 0, y: 20, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+      className="space-y-4"
+    >
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-accent" />
+        <motion.div
+          className="flex items-center gap-2"
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+        >
+          <div className="w-5 h-5 rounded-full bg-accent/20 flex items-center justify-center">
+            <CheckCircle2 className="w-3 h-3 text-accent" />
+          </div>
           <span className="text-sm font-medium text-foreground">
             {files.length} image{files.length > 1 ? "s" : ""} uploaded
           </span>
-        </div>
-        <Button variant="ghost" size="sm" onClick={onReset} className="gap-1.5 text-muted-foreground">
-          <RotateCcw className="w-3.5 h-3.5" /> Upload more
-        </Button>
+        </motion.div>
+        <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+          <Button variant="ghost" size="sm" onClick={onReset} className="gap-1.5 text-muted-foreground hover:text-foreground">
+            <RotateCcw className="w-3.5 h-3.5" /> Upload more
+          </Button>
+        </motion.div>
       </div>
 
-      {/* Image preview + thumbnails */}
+      {/* Preview + links */}
       {activeFile && (
-        <div className="glass rounded-2xl overflow-hidden">
-          <div className="bg-secondary/30 flex items-center justify-center p-4 max-h-64">
-            <img src={activeFile.preview} alt="" className="max-h-56 max-w-full rounded-lg object-contain" />
+        <motion.div
+          className="glass rounded-2xl overflow-hidden cinematic-shadow"
+          layout
+        >
+          {/* Image preview */}
+          <div className="bg-secondary/20 flex items-center justify-center p-6 max-h-72">
+            <motion.img
+              src={activeFile.preview}
+              alt=""
+              className="max-h-60 max-w-full rounded-xl object-contain"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4 }}
+            />
           </div>
 
+          {/* Thumbnails */}
           {files.length > 1 && (
-            <div className="flex gap-1.5 px-4 py-3 border-t border-border overflow-x-auto">
+            <div className="flex gap-1.5 px-4 py-3 border-t border-border/50 overflow-x-auto">
               {files.map((f, i) => (
-                <button
+                <motion.button
                   key={f.id}
                   onClick={() => setActiveTab(i)}
-                  className={`shrink-0 w-12 h-12 rounded-lg overflow-hidden border-2 transition-all ${
-                    activeTab === i ? "border-primary" : "border-transparent hover:border-border"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={`shrink-0 w-11 h-11 rounded-lg overflow-hidden border-2 transition-all duration-300 ${
+                    activeTab === i ? "border-primary glow-border" : "border-transparent hover:border-border"
                   }`}
                 >
                   <img src={f.preview} alt="" className="w-full h-full object-cover" />
-                </button>
+                </motion.button>
               ))}
             </div>
           )}
 
           {/* Link formats */}
-          <div className="px-4 py-3 space-y-1.5 border-t border-border">
-            {linkFormats(activeFile.url, activeFile.file.name, activeFile.deleteUrl).map((fmt) => (
-              <div key={fmt.label} className="flex items-center gap-2">
-                <span className={`text-xs w-20 shrink-0 ${fmt.label === "Delete Link" ? "text-destructive" : "text-muted-foreground"}`}>
-                  {fmt.label === "Delete Link" && <Trash2 className="w-3 h-3 inline mr-1" />}
+          <div className="px-4 py-3 space-y-1.5 border-t border-border/50">
+            {linkFormats(activeFile.url, activeFile.file.name, activeFile.deleteUrl).map((fmt, idx) => (
+              <motion.div
+                key={fmt.label}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.05 }}
+                className="flex items-center gap-2 group"
+              >
+                <span className={`text-xs w-20 shrink-0 flex items-center gap-1 ${
+                  fmt.destructive ? "text-destructive" : "text-muted-foreground"
+                }`}>
+                  <fmt.icon className="w-3 h-3" />
                   {fmt.label}
                 </span>
-                <div className="flex-1 bg-secondary/50 rounded-lg px-2.5 py-1.5 text-xs font-mono text-foreground truncate">
+                <div className="flex-1 bg-secondary/40 rounded-lg px-2.5 py-1.5 text-xs font-mono text-foreground/80 truncate border border-border/30">
                   {fmt.value}
                 </div>
-                <Button size="sm" variant="ghost" onClick={() => copyToClipboard(fmt.value)} className="shrink-0 h-7 px-2">
-                  <Clipboard className="w-3 h-3" />
-                </Button>
-              </div>
+                <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => copyToClipboard(fmt.value, idx)}
+                    className="shrink-0 h-7 px-2 text-muted-foreground hover:text-foreground"
+                  >
+                    {copiedIdx === idx ? (
+                      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
+                        <CheckCircle2 className="w-3 h-3 text-accent" />
+                      </motion.div>
+                    ) : (
+                      <Clipboard className="w-3 h-3" />
+                    )}
+                  </Button>
+                </motion.div>
+              </motion.div>
             ))}
           </div>
-        </div>
+        </motion.div>
       )}
     </motion.div>
   );
