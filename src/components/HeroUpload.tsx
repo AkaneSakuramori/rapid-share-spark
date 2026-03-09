@@ -1,8 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { CloudUpload, Link2, X, Clipboard, CheckCircle2, ArrowUp, RotateCcw, Trash2, Copy, ExternalLink } from "lucide-react";
+import { CloudUpload, Link2, X, Clipboard, CheckCircle2, ArrowUp, RotateCcw, Copy, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
+import { uploadToTelegram } from "@/lib/uploadToTelegram";
 
 interface FileItem {
   id: string;
@@ -11,17 +12,40 @@ interface FileItem {
   progress: number;
   done: boolean;
   url: string;
-  deleteUrl: string;
+  error?: string;
 }
-
-const generateFakeUrl = (name: string) => `https://rapidx.me/i/${Math.random().toString(36).slice(2, 10)}/${name}`;
-const generateDeleteUrl = () => `https://rapidx.me/delete/${Math.random().toString(36).slice(2, 14)}`;
 
 const HeroUpload = () => {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [urlInput, setUrlInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const uploadFile = useCallback(async (item: FileItem) => {
+    try {
+      const result = await uploadToTelegram(item.file, (progress) => {
+        setFiles((prev) =>
+          prev.map((f) => (f.id === item.id ? { ...f, progress } : f))
+        );
+      });
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.id === item.id
+            ? { ...f, done: true, progress: 100, url: result.downloadLink }
+            : f
+        )
+      );
+    } catch (err: any) {
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.id === item.id
+            ? { ...f, error: err.message, progress: 0 }
+            : f
+        )
+      );
+      toast.error(`Upload failed: ${err.message}`);
+    }
+  }, []);
 
   const addFiles = useCallback((newFiles: File[]) => {
     const items: FileItem[] = newFiles.map((file) => ({
@@ -30,22 +54,12 @@ const HeroUpload = () => {
       preview: URL.createObjectURL(file),
       progress: 0,
       done: false,
-      url: generateFakeUrl(file.name),
-      deleteUrl: generateDeleteUrl(),
+      url: "",
     }));
     setFiles((prev) => [...prev, ...items]);
-  }, []);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setFiles((prev) =>
-        prev.map((f) =>
-          f.done ? f : f.progress >= 100 ? { ...f, done: true, progress: 100 } : { ...f, progress: Math.min(f.progress + Math.random() * 15 + 5, 100) }
-        )
-      );
-    }, 200);
-    return () => clearInterval(interval);
-  }, []);
+    // Start uploading each file
+    items.forEach((item) => uploadFile(item));
+  }, [uploadFile]);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -269,12 +283,11 @@ const HeroUpload = () => {
 };
 
 /* ─── Link Formats ─── */
-const linkFormats = (url: string, name: string, deleteUrl: string) => [
+const linkFormats = (url: string, name: string) => [
   { label: "Direct Link", value: url, icon: ExternalLink },
   { label: "Markdown", value: `![${name}](${url})`, icon: Copy },
   { label: "HTML", value: `<img src="${url}" alt="${name}" />`, icon: Copy },
   { label: "BBCode", value: `[img]${url}[/img]`, icon: Copy },
-  { label: "Delete Link", value: deleteUrl, icon: Trash2, destructive: true },
 ];
 
 /* ─── Results Panel ─── */
@@ -358,7 +371,7 @@ const ResultsPanel = ({ files, onReset }: { files: FileItem[]; onReset: () => vo
 
           {/* Link formats */}
           <div className="px-4 py-3 space-y-1.5 border-t border-border/50">
-            {linkFormats(activeFile.url, activeFile.file.name, activeFile.deleteUrl).map((fmt, idx) => (
+            {linkFormats(activeFile.url, activeFile.file.name).map((fmt, idx) => (
               <motion.div
                 key={fmt.label}
                 initial={{ opacity: 0, x: -10 }}
@@ -366,9 +379,7 @@ const ResultsPanel = ({ files, onReset }: { files: FileItem[]; onReset: () => vo
                 transition={{ delay: idx * 0.05 }}
                 className="flex items-center gap-2 group"
               >
-                <span className={`text-xs w-20 shrink-0 flex items-center gap-1 ${
-                  fmt.destructive ? "text-destructive" : "text-muted-foreground"
-                }`}>
+                <span className="text-xs w-20 shrink-0 flex items-center gap-1 text-muted-foreground">
                   <fmt.icon className="w-3 h-3" />
                   {fmt.label}
                 </span>
