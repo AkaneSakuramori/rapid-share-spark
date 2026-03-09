@@ -283,12 +283,11 @@ const HeroUpload = () => {
 };
 
 /* ─── Link Formats ─── */
-const linkFormats = (url: string, name: string, deleteUrl: string) => [
+const linkFormats = (url: string, name: string) => [
   { label: "Direct Link", value: url, icon: ExternalLink },
   { label: "Markdown", value: `![${name}](${url})`, icon: Copy },
   { label: "HTML", value: `<img src="${url}" alt="${name}" />`, icon: Copy },
   { label: "BBCode", value: `[img]${url}[/img]`, icon: Copy },
-  { label: "Delete Link", value: deleteUrl, icon: Trash2, destructive: true },
 ];
 
 /* ─── Results Panel ─── */
