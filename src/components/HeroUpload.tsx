@@ -379,9 +379,7 @@ const ResultsPanel = ({ files, onReset }: { files: FileItem[]; onReset: () => vo
                 transition={{ delay: idx * 0.05 }}
                 className="flex items-center gap-2 group"
               >
-                <span className={`text-xs w-20 shrink-0 flex items-center gap-1 ${
-                  fmt.destructive ? "text-destructive" : "text-muted-foreground"
-                }`}>
+                <span className="text-xs w-20 shrink-0 flex items-center gap-1 text-muted-foreground">
                   <fmt.icon className="w-3 h-3" />
                   {fmt.label}
                 </span>
