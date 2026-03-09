@@ -14,8 +14,12 @@ export async function uploadToTelegram(
   onProgress?: (progress: number) => void
 ): Promise<UploadResult> {
 
+  if (!file) {
+    throw new Error("No file selected");
+  }
+
   if (file.size > 50 * 1024 * 1024) {
-    throw new Error("File size exceeds 50MB limit");
+    throw new Error("File exceeds 50MB Telegram limit");
   }
 
   onProgress?.(10);
@@ -29,14 +33,14 @@ export async function uploadToTelegram(
   try {
     const uploadRes = await fetch(TELEGRAM_API, {
       method: "POST",
-      body: formData,
+      body: formData
     });
 
     uploadData = await uploadRes.json();
 
   } catch (err) {
     console.error("Telegram upload network error:", err);
-    throw new Error("Network error while uploading to Telegram");
+    throw new Error("Failed to connect to Telegram API");
   }
 
   console.log("Telegram response:", uploadData);
@@ -45,7 +49,7 @@ export async function uploadToTelegram(
     throw new Error(uploadData.description || "Telegram upload failed");
   }
 
-  const messageId = uploadData.result?.message_id;
+  const messageId = uploadData.result.message_id;
 
   if (!messageId) {
     throw new Error("Telegram did not return message_id");
@@ -59,30 +63,30 @@ export async function uploadToTelegram(
     const linkRes = await fetch(LINK_API, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
         channel_id: Number(CHANNEL_ID),
-        message_id: messageId,
-      }),
+        message_id: messageId
+      })
     });
 
     linkData = await linkRes.json();
 
   } catch (err) {
     console.error("Link API error:", err);
-    throw new Error("Failed to generate download link");
+    throw new Error("Download link generation failed");
   }
 
   console.log("Link API response:", linkData);
 
   if (!linkData.download_link) {
-    throw new Error("Download link not returned by API");
+    throw new Error("Download link missing in API response");
   }
 
   onProgress?.(100);
 
   return {
-    downloadLink: linkData.download_link,
+    downloadLink: linkData.download_link
   };
 }
