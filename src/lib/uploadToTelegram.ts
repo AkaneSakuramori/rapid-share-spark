@@ -1,92 +1,46 @@
+import express from "express";
+import multer from "multer";
+import axios from "axios";
+import FormData from "form-data";
+import fs from "fs";
+
+const app = express();
+
 const BOT_TOKEN = "8697907922:AAE9fC3OWHMKRawp7tPjncXrKLgXt9n12SE";
 const CHANNEL_ID = "-1003892549696";
+const TG_API = `https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`;
+const LINK_API = "https://animeshrinedl-3c904eef1780.herokuapp.com/api/generate_link";
 
-const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`;
-const LINK_API =
-  "https://animeshrinedl-3c904eef1780.herokuapp.com/api/generate_link";
+const upload = multer({ dest: "uploads/" });
 
-export interface UploadResult {
-  downloadLink: string;
-}
-
-export async function uploadToTelegram(
-  file: File,
-  onProgress?: (progress: number) => void
-): Promise<UploadResult> {
-
-  if (!file) {
-    throw new Error("No file selected");
-  }
-
-  if (file.size > 50 * 1024 * 1024) {
-    throw new Error("File exceeds 50MB Telegram limit");
-  }
-
-  onProgress?.(10);
-
-  const formData = new FormData();
-  formData.append("chat_id", CHANNEL_ID);
-  formData.append("document", file);
-
-  let uploadData;
-
+app.post("/upload", upload.single("file"), async (req, res) => {
   try {
-    const uploadRes = await fetch(TELEGRAM_API, {
-      method: "POST",
-      body: formData
+
+    const form = new FormData();
+    form.append("chat_id", CHANNEL_ID);
+    form.append("document", fs.createReadStream(req.file.path));
+
+    const tg = await axios.post(TG_API, form, {
+      headers: form.getHeaders()
     });
 
-    uploadData = await uploadRes.json();
+    const messageId = tg.data.result.message_id;
 
-  } catch (err) {
-    console.error("Telegram upload network error:", err);
-    throw new Error("Failed to connect to Telegram API");
-  }
-
-  console.log("Telegram response:", uploadData);
-
-  if (!uploadData.ok) {
-    throw new Error(uploadData.description || "Telegram upload failed");
-  }
-
-  const messageId = uploadData.result.message_id;
-
-  if (!messageId) {
-    throw new Error("Telegram did not return message_id");
-  }
-
-  onProgress?.(60);
-
-  let linkData;
-
-  try {
-    const linkRes = await fetch(LINK_API, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        channel_id: Number(CHANNEL_ID),
-        message_id: messageId
-      })
+    const link = await axios.post(LINK_API, {
+      channel_id: Number(CHANNEL_ID),
+      message_id: messageId
     });
 
-    linkData = await linkRes.json();
+    fs.unlinkSync(req.file.path);
+
+    res.json({
+      download_link: link.data.download_link
+    });
 
   } catch (err) {
-    console.error("Link API error:", err);
-    throw new Error("Download link generation failed");
+    console.error(err);
+    res.status(500).json({ error: "Upload failed" });
   }
+});
 
-  console.log("Link API response:", linkData);
-
-  if (!linkData.download_link) {
-    throw new Error("Download link missing in API response");
-  }
-
-  onProgress?.(100);
-
-  return {
-    downloadLink: linkData.download_link
-  };
-}
+app.listen(3000);
