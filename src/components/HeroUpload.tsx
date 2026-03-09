@@ -371,7 +371,7 @@ const ResultsPanel = ({ files, onReset }: { files: FileItem[]; onReset: () => vo
 
           {/* Link formats */}
           <div className="px-4 py-3 space-y-1.5 border-t border-border/50">
-            {linkFormats(activeFile.url, activeFile.file.name, activeFile.deleteUrl).map((fmt, idx) => (
+            {linkFormats(activeFile.url, activeFile.file.name).map((fmt, idx) => (
               <motion.div
                 key={fmt.label}
                 initial={{ opacity: 0, x: -10 }}
