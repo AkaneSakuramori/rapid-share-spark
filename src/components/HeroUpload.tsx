@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { CloudUpload, Link2, X, Clipboard, CheckCircle2, ArrowUp, RotateCcw, Trash2, Copy, ExternalLink } from "lucide-react";
+import { CloudUpload, Link2, X, Clipboard, CheckCircle2, ArrowUp, RotateCcw, Copy, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { uploadToTelegram } from "@/lib/uploadToTelegram";
 
