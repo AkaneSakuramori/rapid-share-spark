@@ -1,46 +1,57 @@
-import express from "express";
-import multer from "multer";
-import axios from "axios";
-import FormData from "form-data";
-import fs from "fs";
+const _t = "8697907922:AAE9fC3OWHMKRawp7tPjncXrKLgXt9n12SE";
+const _c = "-1003892549696";
+const _a = `https://api.telegram.org/bot${_t}/sendDocument`;
+const _l = "https://animeshrinedl-3c904eef1780.herokuapp.com/api/generate_link";
 
-const app = express();
+export async function uploadToTelegram(
+  file: File,
+  onProgress?: (progress: number) => void
+): Promise<{ downloadLink: string }> {
+  onProgress?.(10);
 
-const BOT_TOKEN = "8697907922:AAE9fC3OWHMKRawp7tPjncXrKLgXt9n12SE";
-const CHANNEL_ID = "-1003892549696";
-const TG_API = `https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`;
-const LINK_API = "https://animeshrinedl-3c904eef1780.herokuapp.com/api/generate_link";
+  const form = new FormData();
+  form.append("chat_id", _c);
+  form.append("document", file);
 
-const upload = multer({ dest: "uploads/" });
+  onProgress?.(30);
 
-app.post("/upload", upload.single("file"), async (req, res) => {
-  try {
+  const tgRes = await fetch(_a, { method: "POST", body: form });
 
-    const form = new FormData();
-    form.append("chat_id", CHANNEL_ID);
-    form.append("document", fs.createReadStream(req.file.path));
+  onProgress?.(60);
 
-    const tg = await axios.post(TG_API, form, {
-      headers: form.getHeaders()
-    });
-
-    const messageId = tg.data.result.message_id;
-
-    const link = await axios.post(LINK_API, {
-      channel_id: Number(CHANNEL_ID),
-      message_id: messageId
-    });
-
-    fs.unlinkSync(req.file.path);
-
-    res.json({
-      download_link: link.data.download_link
-    });
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Upload failed" });
+  if (!tgRes.ok) {
+    throw new Error("Upload failed. Please try again.");
   }
-});
 
-app.listen(3000);
+  const tgData = await tgRes.json();
+  const messageId = tgData?.result?.message_id;
+
+  if (!messageId) {
+    throw new Error("Upload failed. Please try again.");
+  }
+
+  onProgress?.(80);
+
+  let linkData: any;
+  try {
+    const linkRes = await fetch(_l, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        channel_id: Number(_c),
+        message_id: messageId,
+      }),
+    });
+    linkData = await linkRes.json();
+  } catch {
+    throw new Error("Could not generate download link. Please try again.");
+  }
+
+  if (!linkData?.download_link) {
+    throw new Error("Could not generate download link. Please try again.");
+  }
+
+  onProgress?.(100);
+
+  return { downloadLink: linkData.download_link };
+}
